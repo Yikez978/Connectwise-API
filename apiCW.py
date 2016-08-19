@@ -20,12 +20,9 @@ __status__ = 'Development'
 
 class apiCW():
     def __init__(self):
-        # self.companyName = '<CW API CompanyName>'
-        # self.pubKey = '<CW API public key>'
-        # self.privKey = '<CW API private key>'
-        self.companyName = 'protech'
-        self.pubKey = 'NFQIspb9XtiIlpT5'
-        self.privKey = 'WyGglWJQxhWswUAS'
+        self.companyName = '<CW API CompanyName>'
+        self.pubKey = '<CW API public key>'
+        self.privKey = '<CW API private key>'
 
     def b64ClientID(self):
         """
