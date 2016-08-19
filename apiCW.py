@@ -121,51 +121,24 @@ class reportCW(apiCW):
         Look for technician names in JSON data, count number of hours billed,
         then output to Excel file with chart.
         """
-        """ ToDo
-        Use data from parseJSON to create new variables based on dictionary
-        keys, use those variables to finish report.  Do NOT hard-code techs
-        or names for techs, if we add/change employees this section has to be
-        modified everytime.  Make this more general, not specific.
+        for tech in self.reportData:
+            timeE = 0
+            for ticket in self.reportData[tech]:
+                timeE += float(self.reportData[tech][ticket]['hoursBilled'])
+            self.reportData[tech]['totalTime'] = timeE
+            print(tech, self.reportData[tech]['totalTime'])
 
-        for tech in reportData:
-            for ticket in tech:
-                time += int(tech[ticket]['hoursBilled'])
-            tech['timeSum'] = time
-        """
-        drowland = []
-        rkoutz = []
-        dyeager = []
-        kmasoner = []
-        drTime = rkTime = dyTime = kmTime = 0
-
-        for entry in reportData:
-            if entry[0] == 'rkoutz':
-                rkoutz.append(entry)
-            elif entry[0] == 'DYeager':
-                dyeager.append(entry)
-            elif entry[0] == 'kmasoner':
-                kmasoner.append(entry)
-            elif entry[0] == 'DRowland':
-                drowland.append(entry)
-            else:
-                continue
-
-        for time in rkoutz:
-            rkTime += float(time[2])
-        for time in dyeager:
-            dyTime += float(time[2])
-        for time in kmasoner:
-            kmTime += float(time[2])
-        for time in drowland:
-            drTime += float(time[2])
-
+        print(self.reportData['DRowland'])
         """ ToDo
         Once tech time is figured out, re-write report to use the new variable
         techs to generate report/chart.
+        """
 
+    '''    with xlsxwriter.Workbook('Report.xlsx') as workbook:
             workbook.set_properties({
                 'title': 'Time Entries Report',
                 'subject': 'Time Entries Report per Tech',
+                'comments': 'Generated at ' + self.now
             })
 
             header_format = workbook.add_format({'align': 'center',
@@ -204,6 +177,16 @@ class reportCW(apiCW):
             worksheet1.write(2, 2, kmTime)
             worksheet1.write(2, 3, dyTime)
 
+    #        chart = workbook.add_chart({'type': 'column'})
+    #        chart.set_title({'name': 'Hours per Tech over Period'})
+    #        chart.add_series({
+    #                            'categories': ['Time Report', 1, 0, 1, 3],
+    #                            'values': ['Time Report', 2, 0, 2, 3],
+    #                            'data_labels': {'value': True}
+    #                        })
+    #        worksheet1.insert_chart('A4', chart)'''
 
 
 if __name__ == "__main__":
+    report = reportCW('time', 'entries', '2016-08-14', '2016-08-18')
+    report.reportTimePerTech()
