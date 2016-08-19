@@ -15,6 +15,8 @@ __email__ = 'lee.rowland@gmail.com'
 __copyright__ = '2016, Dustin Rowland'
 __status__ = 'Development'
 
+# Look for ToDo comments for changes/projects list
+
 
 class apiCW():
     def __init__(self):
@@ -69,6 +71,11 @@ class apiCW():
             for i in self.queryAPI(section, subsection, page):
                 # Verify entry timeStart is between startDate and endDate
                 if startDate <= self.formatDate(i['timeStart']) <= endDate:
+                    """ ToDo
+                    This needs to create a nested dictionary of ticket
+                    information based on enteredBy. Then we can pass the
+                    dictionary to the reports for sumation.
+                    """
                     timeEntries.append((i['enteredBy'], i['billableOption'],
                                         i['hoursBilled'], i['chargeToId'],
                                         i['workType']['name'],
@@ -77,6 +84,11 @@ class apiCW():
                                         i['company']['name']))
             page += 1
         return timeEntries  # return list with each entry as a tuple
+
+
+class reportCW(apiCW):
+    def __init__(self):
+        apiCW.__init__(self)
 
     def reportTicketsPerCompany(self, section, subsection, startDate, endDate):
         """
@@ -89,14 +101,26 @@ class apiCW():
         Look for technician names in JSON data, count number of hours billed,
         then output to Excel file with chart.
         """
+        timestamp = datetime.datetime.now()
+        now = timestamp.strftime('%Y-%m-%d')
         reportData = self.parseJSON(section, subsection, startDate, endDate)
+
+        """ ToDo
+        Use data from parseJSON to create new variables based on dictionary
+        keys, use those variables to finish report.  Do NOT hard-code techs
+        or names for techs, if we add/change employees this section has to be
+        modified everytime.  Make this more general, not specific.
+
+        for tech in reportData:
+            for ticket in tech:
+                time += int(tech[ticket]['hoursBilled'])
+            tech['timeSum'] = time
+        """
         drowland = []
         rkoutz = []
         dyeager = []
         kmasoner = []
         drTime = rkTime = dyTime = kmTime = 0
-        timestamp = datetime.datetime.now()
-        now = timestamp.strftime('%Y-%m-%d')
 
         for entry in reportData:
             if entry[0] == 'rkoutz':
@@ -118,6 +142,11 @@ class apiCW():
             kmTime += float(time[2])
         for time in drowland:
             drTime += float(time[2])
+
+        """ ToDo
+        Once tech time is figured out, re-write report to use the new variable
+        techs to generate report/chart.
+        """"
 
         with xlsxwriter.Workbook('Report.xlsx') as workbook:
             workbook.set_properties({
@@ -173,6 +202,5 @@ class apiCW():
 
 
 if __name__ == "__main__":
-    report = apiCW()
-    report.reportTimePerTech('time', 'entries', '2016-08-14', '2016-08-16')
-    print('Report Generated.')
+    report = reportCW()
+    report.reportTimePerTech('time', 'entries', '2016-08-14', '2016-08-18')
