@@ -20,9 +20,12 @@ __status__ = 'Development'
 
 class apiCW():
     def __init__(self):
-        self.companyName = '<CW API CompanyName>'
+        """self.companyName = '<CW API CompanyName>'
         self.pubKey = '<CW API public key>'
-        self.privKey = '<CW API private key>'
+        self.privKey = '<CW API private key>'"""
+        self.companyName = 'protech'
+        self.pubKey = 'NFQIspb9XtiIlpT5'
+        self.privKey = 'WyGglWJQxhWswUAS'
 
     def b64ClientID(self):
         """
@@ -62,7 +65,7 @@ class apiCW():
         Call queryAPI method to pull dataset out of online system. Will parse
         JSON for data between date ranges, pull out key information.
         """
-        timeEntries = []
+        techEntries = {}
         startDate = datetime.datetime.strptime(startDate, '%Y-%m-%d')
         endDate = datetime.datetime.strptime(endDate, '%Y-%m-%d')
         page = 1
@@ -76,35 +79,48 @@ class apiCW():
                     information based on enteredBy. Then we can pass the
                     dictionary to the reports for sumation.
                     """
-                    timeEntries.append((i['enteredBy'], i['billableOption'],
-                                        i['hoursBilled'], i['chargeToId'],
-                                        i['workType']['name'],
-                                        self.formatDate(i['timeStart']),
-                                        self.formatDate(i['timeEnd']),
-                                        i['company']['name']))
+                    ieB = i['enteredBy']
+                    icTI = i['chargeToId']
+                    ihB = i['hoursBilled']
+                    ibO = i['billableOption']
+                    iwn = i['workType']['name']
+                    itS = i['timeStart']
+                    itE = i['timeEnd']
+                    icn = i['company']['name']
+
+                    if ieB not in techEntries:
+                        techEntries[ieB] = {}
+                    if icTI not in techEntries[ieB]:
+                        techEntries[ieB][icTI] = {}
+
+                    techEntries[ieB][icTI]['hoursBilled'] = ihB
+                    techEntries[ieB][icTI]['billableOption'] = ibO
+                    techEntries[ieB][icTI]['workType'] = iwn
+                    techEntries[ieB][icTI]['timeStart'] = self.formatDate(itS)
+                    techEntries[ieB][icTI]['timeEnd'] = self.formatDate(itE)
+                    techEntries[ieB][icTI]['companyName'] = icn
             page += 1
-        return timeEntries  # return list with each entry as a tuple
+        return techEntries
 
 
 class reportCW(apiCW):
-    def __init__(self):
+    def __init__(self, section, subsect, startDate, endDate):
         apiCW.__init__(self)
+        self.timestamp = datetime.datetime.now()
+        self.now = self.timestamp.strftime('%Y-%m-%d')
+        self.reportData = self.parseJSON(section, subsect, startDate, endDate)
 
-    def reportTicketsPerCompany(self, section, subsection, startDate, endDate):
+    def reportTicketsPerCompany(self):
         """
         .
         """
         pass
 
-    def reportTimePerTech(self, section, subsection, startDate, endDate):
+    def reportTimePerTech(self):
         """
         Look for technician names in JSON data, count number of hours billed,
         then output to Excel file with chart.
         """
-        timestamp = datetime.datetime.now()
-        now = timestamp.strftime('%Y-%m-%d')
-        reportData = self.parseJSON(section, subsection, startDate, endDate)
-
         """ ToDo
         Use data from parseJSON to create new variables based on dictionary
         keys, use those variables to finish report.  Do NOT hard-code techs
@@ -146,13 +162,10 @@ class reportCW(apiCW):
         """ ToDo
         Once tech time is figured out, re-write report to use the new variable
         techs to generate report/chart.
-        """"
 
-        with xlsxwriter.Workbook('Report.xlsx') as workbook:
             workbook.set_properties({
                 'title': 'Time Entries Report',
                 'subject': 'Time Entries Report per Tech',
-                'comments': 'Generated at ' + now
             })
 
             header_format = workbook.add_format({'align': 'center',
@@ -191,16 +204,6 @@ class reportCW(apiCW):
             worksheet1.write(2, 2, kmTime)
             worksheet1.write(2, 3, dyTime)
 
-            chart = workbook.add_chart({'type': 'column'})
-            chart.set_title({'name': 'Hours per Tech over Period'})
-            chart.add_series({
-                                'categories': ['Time Report', 1, 0, 1, 3],
-                                'values': ['Time Report', 2, 0, 2, 3],
-                                'data_labels': {'value': True}
-                            })
-            worksheet1.insert_chart('A4', chart)
 
 
 if __name__ == "__main__":
-    report = reportCW()
-    report.reportTimePerTech('time', 'entries', '2016-08-14', '2016-08-18')
