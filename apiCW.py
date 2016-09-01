@@ -6,6 +6,7 @@
 Pull data from Connectwise API, generate reports.
 """
 import base64
+import sqlite3
 import datetime
 import requests    # requires PIP installation
 import xlsxwriter  # requires PIP installation
@@ -24,9 +25,10 @@ class apiCW():
     """
 
     def __init__(self):
-        """apiCW initialization.
+        """__init__ method.
 
-        Assigns variables needed in methods.
+        Used to initialize the class, assign values to variables, run
+        functions, etc.
         """
         self.companyName = '<CW API CompanyName>'
         self.pubKey = '<CW API public key>'
@@ -72,6 +74,7 @@ class apiCW():
                          headers=header)
         return r.json()
 
+    # ToDo: Phase out after making xlsxCW use sqlCW for data
     def parseJSON(self, sect, subsect, startDate, endDate):
         """parseJSON method.
 
@@ -111,8 +114,75 @@ class apiCW():
         return techEntries
 
 
-class reportCW(apiCW):
-    """reportCW class.
+class sqlCW(apiCW):
+    """sqlCW class.
+
+    Takes the information from cwAPI queryAPI and sends the JSON output into a
+    SQLite database.  This will be used for longterm reporting, tracking tech
+    time entries over a couple years.
+    """
+    """ToDo.
+    [ ] Write new parseJSON function to transfer JSON into SQL insert
+    [x] Build SQLite creation (done in pysswdmgr, make a utility module?)
+        [x] Build tech table, if it doesn't exist - id, name, cwname
+        [x] Build ticket table, if it doesn't exist - entryID, tech.id, entry
+            type (ticket, activity, etc), company name, time billed, time type
+            (billed, not billed, do not charge)
+    [ ] Create SQLite insert function
+        [ ] Verify if entryID exists
+    [ ] Create views or queries for weekly, monthly, yearly reports
+    """
+    def __init__(self, dbname='cwTime.db'):
+        """__init__ method.
+
+        Used to initialize the class, assign values to variables, run
+        functions, etc.
+        """
+        self.db = dbname
+        self.conn = sqlite3.connect(self.db)
+        self.cur = self.conn.cursor()
+
+    def queryDB(self, arg):
+        """queryDB method. Used by functions to manipulate the SQLite DB."""
+        self.cur.execute(arg)
+        self.conn.commit()
+        return self.cur
+
+    def table_verify(self):
+        """table_verify method.
+
+        Query to the DB, create tables if they do not exist.
+        """
+        # name = JSON member name
+        # techname = JSON member identifier
+        # techid = JSON member id
+        self.queryDB("""CREATE TABLE IF NOT EXISTS
+                        tech ("index" INTEGER PRIMARY KEY AUTOINCREMENT
+                        UNIQUE, name TEXT, techname TEXT, techid INT)""")
+        # name = JSON company name
+        # clientname = JSON company identifier
+        # clientid = JSON company id
+        self.queryDB("""CREATE TABLE IF NOT EXISTS
+                        client ("index" INTEGER PRIMARY KEY AUTOINCREMENT
+                        UNIQUE, name TEXT, clientname TEXT, clientid INT)""")
+        # techid = JSON member id
+        # clientid = JSON company id
+        # chargeid = JSON chargeToID
+        # chargetype = JSON chargeToType
+        # billtype = JSON billableOption
+        # worktype = JSON workType name
+        # timestart = JSON timeStart (use apiCW formatDate)
+        # timeend = JSON timeEnd (use apiCW formatDate)
+        # timecharge = JSON hourBilled
+        self.queryDB("""CREATE TABLE IF NOT EXISTS
+                        ticket ("index" INTEGER PRIMARY KEY AUTOINCREMENT
+                        UNIQUE, techid INT, clientid INT, chargeid TEXT,
+                        chargetype TEXT, billtype TEXT, worktype TEXT,
+                        timestart TEXT, timeend TEXT, timecharge INT)""")
+
+
+class xlsxCW(apiCW):  # ToDo: rewrite to pull data from sqlCW, not apiCW
+    """xlsxCW class.
 
     Reporting class for Connectwise data.  Uses apiCW class as base to grab
     and parse JSON data into usable formats.  This is used to generate reports
@@ -120,10 +190,11 @@ class reportCW(apiCW):
     """
 
     def __init__(self, sect, subsect, startDate, endDate):
-        """reportCW initialization.
+        """__init__ method.
 
-        Assigns variables needed in methods and calls
-        the parseJSON method from apiCW to get the parsed dataset.
+        Used to initialize the class, assign values to variables, run
+        functions, etc.  Calls the parseJSON method from apiCW to get the
+        parsed dataset.
         """
         apiCW.__init__(self)
         self.timestamp = datetime.datetime.now()
@@ -190,7 +261,7 @@ class reportCW(apiCW):
                 worksheet1.write_number(row + 1, col, tTime)
                 col += 1
 
-            worksheet1.set_column(0, col + 1, 11)  # expand A-F for header
+            worksheet1.set_column(0, col + 1, 11)  # Expand A-F for header
 
             chart = workbook.add_chart({'type': 'column'})
             chart.set_size({'width': 620, 'height': 300})
@@ -205,5 +276,4 @@ class reportCW(apiCW):
 
 
 if __name__ == "__main__":
-    report = reportCW('time', 'entries', '2016-08-14', '2016-08-18')
-    report.reportTimePerTech()
+    print("You have called apiCW directly. Please use a launcher script.")
